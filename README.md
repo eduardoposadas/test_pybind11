@@ -1,4 +1,17 @@
-﻿# Playing with Pybind11
+* [Playing with Pybind11](#playing-with-pybind11)
+   * [Prime number search using the sieve of Eratosthenes in Python.](#prime-number-search-using-the-sieve-of-eratosthenes-in-python)
+   * [Pybind11](#pybind11)
+   * [Prime number search using the sieve of Eratosthenes in C++.](#prime-number-search-using-the-sieve-of-eratosthenes-in-c)
+      * [Implementations of the sieve of Eratosthenes in C++ using threads.](#implementations-of-the-sieve-of-eratosthenes-in-c-using-threads)
+   * [Calculation of the value of $\pi$ using Leibniz's formula.](#calculation-of-the-value-of-pi-using-leibnizs-formula)
+      * [Calculation of the value of $\pi$ using Leibniz's formula and a multiprocess implementation in Python.](#calculation-of-the-value-of-pi-using-leibnizs-formula-and-a-multiprocess-implementation-in-python)
+      * [Calculation of the value of $\pi$ using Leibniz's formula and a multithreaded implementation in C++.](#calculation-of-the-value-of-pi-using-leibnizs-formula-and-a-multithreaded-implementation-in-c)
+      * [Calculation of the value of $\pi$ using Leibniz's formula and a C++ implementation on GPU with CUDA.](#calculation-of-the-value-of-pi-using-leibnizs-formula-and-a-c-implementation-on-gpu-with-cuda)
+   * [Calculation of the value of $\pi$ using numerical integration.](#calculation-of-the-value-of-pi-using-numerical-integration)
+   * [Conclusions](#conclusions)
+   * [Compiling the source code](#compiling-the-source-code)
+
+# Playing with Pybind11
 Python is an excellent language for rapid prototyping. Thanks to the wide variety of its ecosystem of libraries, it allows the creation of small applications in a very short time, with little effort and excellent results. However, if the problem to be solved is computationally intensive, Python quickly reveals that it is not the appropriate language for this type of problem. Being an interpreted language it is inherently slow and furthermore the default Python interpreter ([CPython](https://github.com/python/cpython)) has a global [lock](https://realpython.com/python-gil/), known as [GIL](https://wiki.python.org/moin/GlobalInterpreterLock), which prevents multiple threads from executing concurrently, resulting in not being able to efficiently take advantage of the multithreading capability that most current processors have.
 
 At the time of this writing there is already an [attempt](https://peps.python.org/pep-0703/) [serious](https://www.blog.pythonlibrary.org/2024/03/14/python-3-13-allows-disabling-of-the-gil-subinterpreters/) to remove GIL from CPython, but it is still in the experimental phase.
