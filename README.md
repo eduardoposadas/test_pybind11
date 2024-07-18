@@ -1,3 +1,4 @@
+﻿# Playing with Pybind11
 Python is an excellent language for rapid prototyping. Thanks to the wide variety of its ecosystem of libraries, it allows the creation of small applications in a very short time, with little effort and excellent results. However, if the problem to be solved is computationally intensive, Python quickly reveals that it is not the appropriate language for this type of problem. Being an interpreted language it is inherently slow and furthermore the default Python interpreter ([CPython](https://github.com/python/cpython)) has a global [lock](https://realpython.com/python-gil/), known as [GIL](https://wiki.python.org/moin/GlobalInterpreterLock), which prevents multiple threads from executing concurrently, resulting in not being able to efficiently take advantage of the multithreading capability that most current processors have.
 
 At the time of this writing there is already an [attempt](https://peps.python.org/pep-0703/) [serious](https://www.blog.pythonlibrary.org/2024/03/14/python-3-13-allows-disabling-of-the-gil-subinterpreters/) to remove GIL from CPython, but it is still in the experimental phase.
@@ -212,8 +213,8 @@ py::array_t<unsigned long long> SieveOfEratosthenes_as_array_nocopy_thread(const
 py::array_t<unsigned long long> SieveOfEratosthenes_as_array_nocopy_thread_pool(const std::string& name, unsigned long long n);
 py::array_t<unsigned long long> SieveOfEratosthenes_as_array_nocopy_generic_thread_pool(const std::string& name, unsigned long long n);
 ```
-Pybind11 [allows](https://pybind11.readthedocs.io/en/stable/advanced/cast/index.html) to use Python types in C++, although this implies making a copy of the data when performing type conversion from C++ to Python. To avoid this copying, [opaque types](https://pybind11.readthedocs.io/en/stable/advanced/cast/stl.html#making-opaque-types) can be used. For STL containers pybind11 has [functions](https://pybind11.readthedocs.io/en/stable/advanced/cast/stl.html#binding-stl-containers) to create (FIXME ref line 18 test_pybind11.cpp) the opaque types directly.
-For `numpy.array` pybind11 has `py::array_t`. A variable of type `py::array_t` can be created from a `std::vector` without copying data using a small template that performs type conversion (FIXME ref line 129 SieveOfEratosthenes.cpp).
+Pybind11 [allows](https://pybind11.readthedocs.io/en/stable/advanced/cast/index.html) to use Python types in C++, although this implies making a copy of the data when performing type conversion from C++ to Python. To avoid this copying, [opaque types](https://pybind11.readthedocs.io/en/stable/advanced/cast/stl.html#making-opaque-types) can be used. For STL containers pybind11 has [functions](https://pybind11.readthedocs.io/en/stable/advanced/cast/stl.html#binding-stl-containers) to [create](https://github.com/eduardoposadas/test_pybind11/blob/64592f1bae25b268000c96c123261bb66d8bfcb0/test_pybind11.cpp#L18) the opaque types directly.
+For `numpy.array` pybind11 has `py::array_t`. A variable of type `py::array_t` can be created from a `std::vector` without copying data using a small template that performs type [conversion](https://github.com/eduardoposadas/test_pybind11/blob/64592f1bae25b268000c96c123261bb66d8bfcb0/SieveOfEratosthenes.cpp#L117).
 
 Of the eight C++ implementations of the algorithm, the first four are single-threaded and are essentially the same. They are the direct translation of the Python implementation into C++:
 ```C++
@@ -242,7 +243,7 @@ The only difference is the data type where the list of prime numbers is stored:
  - `SieveOfEratosthenes_std_list` returns a `std::list`, i.e. it uses a C++ data type and pybind11 makes a copy of the data from the C++ `std::list` to a Python `list` data type.
  - `SieveOfEratosthenes_python_list` uses and returns a variable of type `py::list`. This data type is the way pybind11 allows to use a Python `list` data type in C++ code.
  - `SieveOfEratosthenes_std_vector` returns a `std::vector` treated as an opaque pybind11 data type, i.e. without data copying in the C++ to Python type conversion.
- - `SieveOfEratosthenes_as_array_nocopy` returns a `py::array_t` which in Python becomes a `numpy.array`. This array is generated from a `std::vector` without copying data (FIXME ref line 129 SieveOfEratosthenes.cpp).
+ - `SieveOfEratosthenes_as_array_nocopy` returns a `py::array_t` which in Python becomes a `numpy.array`. This array is generated from a `std::vector` without [copying](https://github.com/eduardoposadas/test_pybind11/blob/64592f1bae25b268000c96c123261bb66d8bfcb0/SieveOfEratosthenes.cpp#L157) data.
 
 For n=100_000_000 the execution times are:
 ```
@@ -298,8 +299,8 @@ py::array_t<unsigned long long> SieveOfEratosthenes_as_array_nocopy_omp(unsigned
 }
 ```
 
- - `SieveOfEratosthenes_as_array_nocopy_thread` splits the sieve into equal chunks of the size of the L1 cache for data (FIXME ref line 19 utils.cpp) and launches a thread for each chunk. This is an example of how NOT TO DO IT.
- - `SieveOfEratosthenes_as_array_nocopy_thread_pool` launches (FIXME ref line 331 SieveOfEratosthenes.cpp) as many threads as there are cores in the computer where it is executed:
+ - `SieveOfEratosthenes_as_array_nocopy_thread` splits the sieve into equal chunks of the size of the L1 cache for [data](https://github.com/eduardoposadas/test_pybind11/blob/64592f1bae25b268000c96c123261bb66d8bfcb0/utils.cpp#L11) and launches a thread for each chunk. This is an example of how NOT TO DO IT.
+ - `SieveOfEratosthenes_as_array_nocopy_thread_pool` [launches](https://github.com/eduardoposadas/test_pybind11/blob/64592f1bae25b268000c96c123261bb66d8bfcb0/SieveOfEratosthenes.cpp#L335) as many threads as there are cores in the computer where it is executed:
 ```C++
     // Number of workers
     auto n_workers = std::thread::hardware_concurrency();
@@ -314,7 +315,7 @@ py::array_t<unsigned long long> SieveOfEratosthenes_as_array_nocopy_omp(unsigned
     for(decltype(n_workers) i = 0; i < n_workers; i++)
         workers_pool.emplace_back(SieveOfEratosthenes_pool_worker, std::ref(jobs_queue));
 ```
-These threads collect jobs from a FIFO queue (FIXME ref to line 341 sieveOfEratostenes.cpp and jobs_fifo_queue.h). In each job the sieve chunk that the thread has to compute is specified and there is an entry for the thread to save the result. Saving the result in the job queue itself avoids unnecessary data copies:
+These threads [collect](https://github.com/eduardoposadas/test_pybind11/blob/64592f1bae25b268000c96c123261bb66d8bfcb0/SieveOfEratosthenes.cpp#L298) jobs from a FIFO [queue](https://github.com/eduardoposadas/test_pybind11/blob/64592f1bae25b268000c96c123261bb66d8bfcb0/jobs_fifo_queue.h#L26). In each job the sieve chunk that the thread has to compute is specified and there is an entry for the thread to save the result. Saving the result in the job queue itself avoids unnecessary data copies:
 ```C++
 // Job type for the queue of jobs
 struct job_type{
@@ -340,7 +341,7 @@ The sieve chunks of each job are the size of the processors' L1 data cache. This
     }
 ```
 When there are no more jobs in the FIFO queue, the results of all jobs are collected to create the resulting list of prime numbers.
- - `SieveOfEratosthenes_as_array_nocopy_generic_thread_pool` is a more generic implementation than the previous one. A task queue (FIXME ref to thread_pool.h) has been used in which any C++ function can be enqueued. In this case functions are queued that share a common sieve and compute the prime numbers from a sieve chunk that has the size of the processors L1 cache for data. The results of these tasks are kept in the task queue itself and are collected once the task queue has been told that no more tasks are to be sent. The lists are sorted and returned together as a single list of prime numbers as the final result.
+ - `SieveOfEratosthenes_as_array_nocopy_generic_thread_pool` is a more generic [implementation](https://github.com/eduardoposadas/test_pybind11/blob/64592f1bae25b268000c96c123261bb66d8bfcb0/SieveOfEratosthenes.cpp#L414) than the previous one. A task [queue](https://github.com/eduardoposadas/test_pybind11/blob/64592f1bae25b268000c96c123261bb66d8bfcb0/thread_pool.h#L15) has been used in which any C++ function can be enqueued. In this case functions are queued that share a common sieve and compute the prime numbers from a sieve chunk that has the size of the processors L1 cache for data. The results of these tasks are kept in the task queue itself and are collected once the task queue has been told that no more tasks are to be sent. The lists are sorted and returned together as a single list of prime numbers as the final result.
 ```C++
     std::shared_ptr<bool[]> sieve(new bool[n + 1]);
     ThreadPool<std::vector<unsigned long long>> workers_pool;
@@ -381,7 +382,7 @@ This is because:
  - The very nature of the sieve of Eratosthenes algorithm. Each thread that is used to calculate the prime numbers in a chunk of the sieve needs to calculate the prime numbers prior to the start position of the sieve chunk, each thread is doing calculations that another thread has already performed.
 
 ## Calculation of the value of $\pi$ using Leibniz's formula.
-Leibniz's [formula](https://en.wikipedia.org/wiki/Leibniz_formula_for_%CF%80) for the calculation of $\pi$ is very easy to implement in Python:
+Leibniz's [formula](https://en.wikipedia.org/wiki/Leibniz_formula_for_%CF%80) for the calculation of $\pi$ is very easy to [implement](https://github.com/eduardoposadas/test_pybind11/blob/64592f1bae25b268000c96c123261bb66d8bfcb0/main.py#L187) in Python:
 ```Python
 def pi_leibniz(n: int) -> float:
     s = 1
@@ -400,7 +401,7 @@ def pi_leibniz(n: int) -> float:
 As you can see from the comment, the first optimization that has been done is not to use exponentiation to decide the sign of the adder. Exponentiation is a very slow operation, even in C++, whereas performing the modulo two operation is inherently fast on a computer, since internally it is using a binary representation of the numbers.
 The other small optimization that has been done is to use a variable called `k` to which at each iteration 2 is added to avoid having to calculate `2 * i + 1`.
 
-The C++ implementation, which is in the file `CalculatingPi.cpp`(FIXME ref line 89 to file), is the direct translation of the Python code:
+The C++ [implementation](https://github.com/eduardoposadas/test_pybind11/blob/64592f1bae25b268000c96c123261bb66d8bfcb0/CalculatingPi.cpp#L85), which is in the file `CalculatingPi.cpp`, is the direct translation of the Python code:
 ```C++
 long double pi_leibniz(unsigned long long n)
     long double s = 1;
@@ -436,7 +437,7 @@ Python offers the possibility to implement [multithreaded](https://docs.python.o
  - Passing data between different processes is much more expensive than passing data between threads since it is done using shared memory. In this case it is not a problem since the child processes only return a floating point number to the parent.
 
 Since in this problem the data transfer between the different processes is minimal, it is possible that the implementation using the Python process-based parallelism module will give good results.
-The Python implementation has been, as usual, very simple:
+The Python [implementation](https://github.com/eduardoposadas/test_pybind11/blob/64592f1bae25b268000c96c123261bb66d8bfcb0/main.py#L220) has been, as usual, very simple:
 ```Python
 def pi_leibniz_concurrent(n: int) -> float:
     n_cpu = os.cpu_count()
@@ -449,8 +450,9 @@ def pi_leibniz_concurrent(n: int) -> float:
         sum_ = sum(r.result() for r in cf.as_completed(results))
 
     return sum_ * 4.0
-```We have simply divided the number of iterations between the number of processors with the formula (FIXME ref fich main.py line 223 `chunk_size = (n + n_cpu - 1) // n_cpu`. In this way as many processes are launched as processors are available and each process takes care of `chunk_size` operations. If the number of iterations is not a multiple of the number of processors, the last process will handle fewer iterations.
-The code of each thread is very similar to the code of the single-process function:
+```
+We have simply divided the number of iterations between the number of processors with the [formula](https://github.com/eduardoposadas/test_pybind11/blob/64592f1bae25b268000c96c123261bb66d8bfcb0/main.py#L224) `chunk_size = (n + n_cpu - 1) // n_cpu`. In this way as many processes are launched as processors are available and each process takes care of `chunk_size` operations. If the number of iterations is not a multiple of the number of processors, the last process will handle fewer iterations.
+The [code](https://github.com/eduardoposadas/test_pybind11/blob/64592f1bae25b268000c96c123261bb66d8bfcb0/main.py#L205) of each thread is very similar to the code of the single-process function:
 ```Python
 def pi_leibniz_concurrent_worker(start: int, end: int) -> float:
     s = 1 if start == 1 else 0
@@ -479,7 +481,7 @@ Furthermore, the ratio between the execution time of the single-process implemen
 
 ### Calculation of the value of $\pi$ using Leibniz's formula and a multithreaded implementation in C++.
 The next step in trying to reduce the execution time is to do a multithreaded C++ implementation of the above algorithm. This is fairly straightforward, since there is no data sharing between threads as in the sieve of Eratosthenes.
-The C++ translation of the parent process:
+The C++ [translation](https://github.com/eduardoposadas/test_pybind11/blob/64592f1bae25b268000c96c123261bb66d8bfcb0/CalculatingPi.cpp#L124) of the parent process:
 ```C++
 long double pi_leibniz_threads(unsigned long long n)
 {
@@ -509,7 +511,7 @@ long double pi_leibniz_threads(unsigned long long n)
     return sum;
 }
 ```
-The C++ translation of the thread code:
+The C++ [translation](https://github.com/eduardoposadas/test_pybind11/blob/64592f1bae25b268000c96c123261bb66d8bfcb0/CalculatingPi.cpp#L105) of the thread code:
 ``` C++
 void pi_leibniz_worker(std::promise<long double> && p,
                        unsigned long long start,
@@ -530,7 +532,7 @@ void pi_leibniz_worker(std::promise<long double> && p,
     p.set_value(s);
 }
 ```
-The parent thread is responsible for collecting (FIXME ref fich CalculatingPi.cpp line 151) all the results, adding them up and multiplying by four to get the value of $\pi$.
+The parent thread is responsible for [collecting](https://github.com/eduardoposadas/test_pybind11/blob/64592f1bae25b268000c96c123261bb66d8bfcb0/CalculatingPi.cpp#L147) all the results, adding them up and multiplying by four to get the value of $\pi$.
 
 The execution times for n=100_000_000:
 ```
@@ -547,7 +549,7 @@ From the timing table it can also be seen that the reduction in execution time b
 
 ### Calculation of the value of $\pi$ using Leibniz's formula and a C++ implementation on GPU with CUDA.
 The calculation of the value of $\pi$ using Leibniz's formula is an algorithm that is easily parallelizable and that reduces its execution time with a geometric progression in relation to the threads used, as seen in the previous section. This is why I found it interesting to implement this algorithm using the GPU.
-The implementation is extremely simple. The entry function is in charge of calculating the optimal number of threads to be launched on the GPU using the [function](https://developer.nvidia.com/blog/cuda-pro-tip-occupancy-api-simplifies-launch-configuration/) `cudaOccupancyMaxPotentialBlockSize`, reserves space in memory for the result of each thread and, when the threads have finished, collects the results and returns the calculated $\pi$ value:
+The [implementation](https://github.com/eduardoposadas/test_pybind11/blob/64592f1bae25b268000c96c123261bb66d8bfcb0/CalculatingPi_gpu.cu#L100) is extremely simple. The entry function is in charge of calculating the optimal number of threads to be launched on the GPU using the [function](https://developer.nvidia.com/blog/cuda-pro-tip-occupancy-api-simplifies-launch-configuration/) `cudaOccupancyMaxPotentialBlockSize`, reserves space in memory for the result of each thread and, when the threads have finished, collects the results and returns the calculated $\pi$ value:
 
 ```C++
 long double pi_leibniz_gpu(const unsigned long long iterations) {
@@ -582,7 +584,7 @@ long double pi_leibniz_gpu(const unsigned long long iterations) {
     return pi;
 }
 ```
-The code for threads launched on the GPU is very similar to the code for threads launched on the CPU in the previous section:
+The [code](https://github.com/eduardoposadas/test_pybind11/blob/64592f1bae25b268000c96c123261bb66d8bfcb0/CalculatingPi_gpu.cu#L77) for threads launched on the GPU is very similar to the code for threads launched on the CPU in the previous section:
 ```C++
 __global__ void pi_leibniz(float_type *result, const unsigned long int iterations) {
     const unsigned int n_threads = gridDim.x * blockDim.x;
@@ -607,12 +609,12 @@ __global__ void pi_leibniz(float_type *result, const unsigned long int iteration
     result[index] = s;
 }
 ```
-The fundamental difference with the code running on CPU is that the start and end of the number of iterations to be calculated by each thread, the `start` and `end` variables, have to be calculated within the thread since all threads are launched at the same time with the call (FIXME ref CalculatingPi_gpu.cu line 121) `.
+The fundamental difference with the code running on CPU is that the start and end of the number of iterations to be calculated by each thread, the `start` and `end` variables, have to be calculated within the thread since all threads are launched at the same time with the [call](https://github.com/eduardoposadas/test_pybind11/blob/64592f1bae25b268000c96c123261bb66d8bfcb0/CalculatingPi_gpu.cu#L121) `
 pi_leibniz<<<gridSize, blockSize><(dev_result, iterations);`.
 
 Similarly, since there is no possibility for each thread to return a value, the result of each thread is stored in an array called `result` in the position indicated by the variable `index`. This variable indicates the thread number and is calculated based on CUDA's own variables [calls](https://docs.nvidia.com/cuda/cuda-c-programming-guide/#built-in-variables) `blockIdx` and `blockDim`.
 
-Another difference (FIXME ref CalculatingPi_gpu.cu line 16) with the code running on CPU is the type of the value returned by each thread. While in the code running on CPU the value is of type `long double`, in the code running on GPU it is of type `double` since the `long double` type is not [supported](https://docs.nvidia.com/cuda/archive/9.2/cuda-c-programming-guide/#long-double) by CUDA in the code running on GPU.
+Another [difference](https://github.com/eduardoposadas/test_pybind11/blob/64592f1bae25b268000c96c123261bb66d8bfcb0/CalculatingPi_gpu.cu#L17) with the code running on CPU is the type of the value returned by each thread. While in the code running on CPU the value is of type `long double`, in the code running on GPU it is of type `double` since the `long double` type is not [supported](https://docs.nvidia.com/cuda/archive/9.2/cuda-c-programming-guide/#long-double) by CUDA in the code running on GPU.
 
 The computer I was running these tests on had an Nvidia GTX 1050 card, a rather modest card but in this case it does its job perfectly. The execution times for n=100_000_000:
 ```
@@ -653,11 +655,11 @@ From 1,000,000,000,000 iterations onwards the execution time increases in the sa
 
 ## Calculation of the value of $\pi$ using numerical integration.
 For the calculation of the value of $\pi$ using [numerical integration](https://www.stolaf.edu/people/rab/os/pub0/modules/PiUsingNumericalIntegration/index.html) the same strategy has been followed as in the previous section for the calculation of the value of $\pi$ using the [Leibniz formula](https://en.wikipedia.org/wiki/Leibniz_formula_for_%CF%80). The following implementations have been made:
- - In Python without concurrency (FIXME ref to functions in the code).
- - In Python with multiprocess concurrency.
- - In C++ with a single thread.
- - In C++ with multiple threads.
- - In C++ with CUDA, i.e. executing the algorithm with multiple threads on GPU.
+ - In Python without [concurrency](https://github.com/eduardoposadas/test_pybind11/blob/64592f1bae25b268000c96c123261bb66d8bfcb0/main.py#L147).
+ - In Python with multiprocess [concurrency](https://github.com/eduardoposadas/test_pybind11/blob/64592f1bae25b268000c96c123261bb66d8bfcb0/main.py#L171).
+ - In C++ with a single [thread](https://github.com/eduardoposadas/test_pybind11/blob/64592f1bae25b268000c96c123261bb66d8bfcb0/CalculatingPi.cpp#L10).
+ - In C++ with multiple [threads](https://github.com/eduardoposadas/test_pybind11/blob/64592f1bae25b268000c96c123261bb66d8bfcb0/CalculatingPi.cpp#L50).
+ - In C++ with CUDA, i.e. executing the algorithm with multiple [threads](https://github.com/eduardoposadas/test_pybind11/blob/64592f1bae25b268000c96c123261bb66d8bfcb0/CalculatingPi_gpu.cu#L40) on GPU.
 
 The Python implementation is:
 ```Python
@@ -726,7 +728,10 @@ To compile the source code in Ubuntu 24.04 and Ubuntu 20.04 the steps are:
    ```bash
    sudo apt install nvidia-cuda-toolkit
    ```
- - Copy the git repository.
+ - Clone the git repository.
+   ```bash
+   git clone https://github.com/eduardoposadas/test_pybind11.git
+   ```
  - Change to the created directory and run `cmake` to configure the project and generate a build system.
    ```bash
    cd test_pybind11
