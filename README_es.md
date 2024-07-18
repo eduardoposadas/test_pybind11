@@ -1,4 +1,17 @@
-﻿# Playing with Pybind11
+* [Jugando con Pybind11](#jugando-con-pybind11)
+   * [Búsqueda de números primos usando la criba de Eratóstenes en Python.](#búsqueda-de-números-primos-usando-la-criba-de-eratóstenes-en-python)
+   * [Pybind11](#pybind11)
+   * [Búsqueda de números primos usando la criba de Eratóstenes en C++.](#búsqueda-de-números-primos-usando-la-criba-de-eratóstenes-en-c)
+      * [Implementaciones de la criba de Eratóstenes en C++ usando hilos.](#implementaciones-de-la-criba-de-eratóstenes-en-c-usando-hilos)
+   * [Cálculo del valor de $\pi$ usando la fórmula de Leibniz.](#cálculo-del-valor-de-pi-usando-la-fórmula-de-leibniz)
+      * [Cálculo del valor de $\pi$ usando la fórmula de Leibniz y una implementación multiproceso en Python.](#cálculo-del-valor-de-pi-usando-la-fórmula-de-leibniz-y-una-implementación-multiproceso-en-python)
+      * [Cálculo del valor de $\pi$ usando la fórmula de Leibniz y una implementación multihilo en C++.](#cálculo-del-valor-de-pi-usando-la-fórmula-de-leibniz-y-una-implementación-multihilo-en-c)
+      * [Cálculo del valor de $\pi$ usando la fórmula de Leibniz y una implementación C++ en GPU con CUDA.](#cálculo-del-valor-de-pi-usando-la-fórmula-de-leibniz-y-una-implementación-c-en-gpu-con-cuda)
+   * [Cálculo del valor de $\pi$ usando integración numérica.](#cálculo-del-valor-de-pi-usando-integración-numérica)
+   * [Conclusiones](#conclusiones)
+   * [Compilación del código fuente](#compilación-del-código-fuente)
+
+# Jugando con Pybind11
 Python es un lenguaje excelente para prototipado rápido. Gracias a la amplia variedad de su ecosistema de librerías permite la creación de pequeñas aplicaciones en muy poco tiempo, con poco esfuerzo y excelentes resultados. Sin embargo, si el problema a resolver es computacionalmente intensivo, Python rápidamente deja ver que no es el lenguaje apropiado para este tipo de problemas. Al ser un lenguaje interpretado es intrínsecamente lento y además el interprete por defecto de Python  ([CPython](https://github.com/python/cpython)) tiene un [bloqueo](https://realpython.com/python-gil/) global, conocido como [GIL](https://wiki.python.org/moin/GlobalInterpreterLock), que impide que varios hilos se ejecuten concurrentemente, lo que provoca que no se pueda aprovechar de forma eficiente la capacidad de multiproceso que tienen la mayoría de los procesadores actuales.
 
 En el momento de escribir esto ya hay un [intento](https://peps.python.org/pep-0703/) [serio](https://www.blog.pythonlibrary.org/2024/03/14/python-3-13-allows-disabling-of-the-gil-subinterpreters/) de eliminar el GIL de CPython, pero aún está en fase experimental.
