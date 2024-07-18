@@ -718,7 +718,7 @@ Pi Area Int. C++ GPU                         61.598  3.141592653590776    <class
 
 ```
 As with the Leibniz formula, the execution time ratio between the single-process Python implementation and the multiprocess Python implementation is close to 3.4 (22656,576 / 6604,540 = 3.43), which indicates that the multiprocess implementation does not make optimal use of the four cores of the computer where the tests were run.
-Much more striking is the ratio of execution time between the single-threaded C++ implementation and the multithreaded C++ implementation: 2.47 (275,097 / 110,970 =2.47). The square root operation, `std::sqrt` in C++, seems to noticeably influence the ability of the kernels to parallelize threads. As in the calculation of $\pi$ with the Leibniz formula, floating point operations have a significant impact on the parallel performance of the processor cores.
+Much more striking is the ratio of execution time between the single-threaded C++ implementation and the multithreaded C++ implementation: 2.47 (275,097 / 110,970 =2.47). The square root operation, `std::sqrt` in C++, seems to noticeably influence the ability of the cores to parallelize threads. As in the calculation of $\pi$ with the Leibniz formula, floating point operations have a significant impact on the parallel performance of the processor cores.
 
 ## Conclusions
 What started as a game to catch me up with the new improvements that C++ is receiving has ended up being a free time sink, although I must confess that it has been with pleasure. If nothing else, after all this testing I have been able to come to the following conclusions:
