@@ -1,0 +1,9 @@
+# PyCharm
+/.idea
+/venv
+
+# Compilation output
+/test_pybind11.cpython-310*
+
+# Compìlation files
+/build*
