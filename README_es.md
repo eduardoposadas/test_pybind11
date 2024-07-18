@@ -1,4 +1,5 @@
-﻿Python es un lenguaje excelente para prototipado rápido. Gracias a la amplia variedad de su ecosistema de librerías permite la creación de pequeñas aplicaciones en muy poco tiempo, con poco esfuerzo y excelentes resultados. Sin embargo, si el problema a resolver es computacionalmente intensivo, Python rápidamente deja ver que no es el lenguaje apropiado para este tipo de problemas. Al ser un lenguaje interpretado es intrínsecamente lento y además el interprete por defecto de Python  ([CPython](https://github.com/python/cpython)) tiene un [bloqueo](https://realpython.com/python-gil/) global, conocido como [GIL](https://wiki.python.org/moin/GlobalInterpreterLock), que impide que varios hilos se ejecuten concurrentemente, lo que provoca que no se pueda aprovechar de forma eficiente la capacidad de multiproceso que tienen la mayoría de los procesadores actuales.
+﻿# Playing with Pybind11
+Python es un lenguaje excelente para prototipado rápido. Gracias a la amplia variedad de su ecosistema de librerías permite la creación de pequeñas aplicaciones en muy poco tiempo, con poco esfuerzo y excelentes resultados. Sin embargo, si el problema a resolver es computacionalmente intensivo, Python rápidamente deja ver que no es el lenguaje apropiado para este tipo de problemas. Al ser un lenguaje interpretado es intrínsecamente lento y además el interprete por defecto de Python  ([CPython](https://github.com/python/cpython)) tiene un [bloqueo](https://realpython.com/python-gil/) global, conocido como [GIL](https://wiki.python.org/moin/GlobalInterpreterLock), que impide que varios hilos se ejecuten concurrentemente, lo que provoca que no se pueda aprovechar de forma eficiente la capacidad de multiproceso que tienen la mayoría de los procesadores actuales.
 
 En el momento de escribir esto ya hay un [intento](https://peps.python.org/pep-0703/) [serio](https://www.blog.pythonlibrary.org/2024/03/14/python-3-13-allows-disabling-of-the-gil-subinterpreters/) de eliminar el GIL de CPython, pero aún está en fase experimental.
 Mientras tanto, como indica este [artículo](https://realpython.com/python-parallel-processing/), las únicas maneras de evitar el GIL son:
@@ -212,8 +213,8 @@ py::array_t<unsigned long long> SieveOfEratosthenes_as_array_nocopy_thread(const
 py::array_t<unsigned long long> SieveOfEratosthenes_as_array_nocopy_thread_pool(const std::string& name, unsigned long long n);
 py::array_t<unsigned long long> SieveOfEratosthenes_as_array_nocopy_generic_thread_pool(const std::string& name, unsigned long long n);
 ```
-Pybind11 [permite](https://pybind11.readthedocs.io/en/stable/advanced/cast/index.html) utilizar tipos de Python en C++, aunque esto implica hacer una copia de los datos cuando se realiza la conversión de tipos de C++ a Python. Para evitar esta copia se pueden utilizar [tipos opacos](https://pybind11.readthedocs.io/en/stable/advanced/cast/stl.html#making-opaque-types). En el caso de los contenedores de la STL pybind11 dispone de [funciones](https://pybind11.readthedocs.io/en/stable/advanced/cast/stl.html#binding-stl-containers) para crear (FIXME ref linea 18 test_pybind11.cpp) los tipos opacos de forma directa.
-Para los  `numpy.array` pybind11 dispone de `py::array_t`. Se puede crear una variable del tipo `py::array_t` a partir de un `std::vector` sin copia de datos usando un pequeño template que realiza la conversión de tipos (FIXME ref linea 129 SieveOfEratosthenes.cpp).
+Pybind11 [permite](https://pybind11.readthedocs.io/en/stable/advanced/cast/index.html) utilizar tipos de Python en C++, aunque esto implica hacer una copia de los datos cuando se realiza la conversión de tipos de C++ a Python. Para evitar esta copia se pueden utilizar [tipos opacos](https://pybind11.readthedocs.io/en/stable/advanced/cast/stl.html#making-opaque-types). En el caso de los contenedores de la STL pybind11 dispone de [funciones](https://pybind11.readthedocs.io/en/stable/advanced/cast/stl.html#binding-stl-containers) para [crear](https://github.com/eduardoposadas/test_pybind11/blob/64592f1bae25b268000c96c123261bb66d8bfcb0/test_pybind11.cpp#L18) los tipos opacos de forma directa.
+Para los  `numpy.array` pybind11 dispone de `py::array_t`. Se puede crear una variable del tipo `py::array_t` a partir de un `std::vector` sin copia de datos usando un pequeño template que realiza la [conversión](https://github.com/eduardoposadas/test_pybind11/blob/64592f1bae25b268000c96c123261bb66d8bfcb0/SieveOfEratosthenes.cpp#L117) de tipos.
 
 De las ocho implementaciones del algoritmo en C++, las cuatro primeras son monohilo y son esencialmente iguales. Son la traducción directa de la implementación en Python a C++:
 ```C++
@@ -298,8 +299,8 @@ py::array_t<unsigned long long> SieveOfEratosthenes_as_array_nocopy_omp(unsigned
 }
 ```
 
- - `SieveOfEratosthenes_as_array_nocopy_thread` divide la criba en trozos iguales del tamaño de la caché L1 para datos (FIXME ref linea 19 utils.cpp) y lanza un hilo de ejecución para cada trozo. Es un ejemplo de como NO HAY QUE HACERLO.
- - `SieveOfEratosthenes_as_array_nocopy_thread_pool` lanza (FIXME ref linea 331 SieveOfEratosthenes.cpp) tantos hilos de ejecución como núcleos tenga el ordenador donde se ejecuta:
+ - `SieveOfEratosthenes_as_array_nocopy_thread` divide la criba en trozos iguales del tamaño de la caché L1 para [datos](https://github.com/eduardoposadas/test_pybind11/blob/64592f1bae25b268000c96c123261bb66d8bfcb0/utils.cpp#L11) y lanza un hilo de ejecución para cada trozo. Es un ejemplo de como NO HAY QUE HACERLO.
+ - `SieveOfEratosthenes_as_array_nocopy_thread_pool` [lanza](https://github.com/eduardoposadas/test_pybind11/blob/64592f1bae25b268000c96c123261bb66d8bfcb0/SieveOfEratosthenes.cpp#L335) tantos hilos de ejecución como núcleos tenga el ordenador donde se ejecuta:
 ```C++
     // Number of workers
     auto n_workers = std::thread::hardware_concurrency();
@@ -314,7 +315,7 @@ py::array_t<unsigned long long> SieveOfEratosthenes_as_array_nocopy_omp(unsigned
     for(decltype(n_workers) i = 0; i < n_workers; i++)
         workers_pool.emplace_back(SieveOfEratosthenes_pool_worker, std::ref(jobs_queue));
 ``` 
-Estos hilos recogen trabajos de una cola FIFO (FIXME ref a linea 341 sieveOfEratostenes.cpp y a jobs_fifo_queue.h). En cada trabajo se indica el trozo de criba que el hilo tiene que calcular y hay una entrada para que el hilo guarde el resultado. Guardar el resultado en la propia cola de trabajos evita copias de datos innecesarias:
+Estos hilos [recogen](https://github.com/eduardoposadas/test_pybind11/blob/64592f1bae25b268000c96c123261bb66d8bfcb0/SieveOfEratosthenes.cpp#L298) trabajos de una [cola](https://github.com/eduardoposadas/test_pybind11/blob/64592f1bae25b268000c96c123261bb66d8bfcb0/jobs_fifo_queue.h#L26) FIFO. En cada trabajo se indica el trozo de criba que el hilo tiene que calcular y hay una entrada para que el hilo guarde el resultado. Guardar el resultado en la propia cola de trabajos evita copias de datos innecesarias:
 ```C++
 // Job type for the queue of jobs
 struct job_type{
@@ -340,7 +341,7 @@ Los trozos de la criba de cada trabajo son del tamaño de la caché para datos L
     }
 ```
 Cuando ya no hay más trabajos en la cola FIFO se recogen los resultados de todos los trabajos para crear la lista de números primos resultante.
- - `SieveOfEratosthenes_as_array_nocopy_generic_thread_pool` es una implementación más genérica que la anterior. Se ha usado una cola de tareas (FIXME ref a thread_pool.h) en la que se puede encolar cualquier función C++. En este caso se encolan funciones que comparten una criba común y que calculan los números primos de un trozo de criba que tiene el tamaño de la caché L1 de los procesadores para datos. Los resultados de estas tareas se conservan en la propia cola de tareas y son recogidos una vez se ha indicado a la cola de tareas que no se van a mandar más tareas. Las listas se ordenan y se devuelven unidas en una sola lista de números primos como resultado final.
+ - `SieveOfEratosthenes_as_array_nocopy_generic_thread_pool` es una [implementación](https://github.com/eduardoposadas/test_pybind11/blob/64592f1bae25b268000c96c123261bb66d8bfcb0/SieveOfEratosthenes.cpp#L414) más genérica que la anterior. Se ha usado una [cola](https://github.com/eduardoposadas/test_pybind11/blob/64592f1bae25b268000c96c123261bb66d8bfcb0/thread_pool.h#L15) de tareas en la que se puede encolar cualquier función C++. En este caso se encolan funciones que comparten una criba común y que calculan los números primos de un trozo de criba que tiene el tamaño de la caché L1 de los procesadores para datos. Los resultados de estas tareas se conservan en la propia cola de tareas y son recogidos una vez se ha indicado a la cola de tareas que no se van a mandar más tareas. Las listas se ordenan y se devuelven unidas en una sola lista de números primos como resultado final.
 ```C++
     std::shared_ptr<bool[]> sieve(new bool[n + 1]);
     ThreadPool<std::vector<unsigned long long>> workers_pool;
@@ -381,7 +382,7 @@ Esto es debido a que:
  - La propia naturaleza del algoritmo de la criba de Eratóstenes. Cada hilo que se usa para calcular los números primos en un trozo de la criba necesita calcular los números primos anteriores a la posición del inicio del trozo de la criba, cada hilo está haciendo cálculos que ya ha realizado otro hilo.
 
 ## Cálculo del valor de $\pi$ usando la fórmula de Leibniz.
-La [fórmula](https://en.wikipedia.org/wiki/Leibniz_formula_for_%CF%80) de Leibniz para el cálculo de $\pi$ es muy sencilla de implementar en Python:
+La [fórmula](https://en.wikipedia.org/wiki/Leibniz_formula_for_%CF%80) de Leibniz para el cálculo de $\pi$ es muy sencilla de [implementar](https://github.com/eduardoposadas/test_pybind11/blob/64592f1bae25b268000c96c123261bb66d8bfcb0/main.py#L187) en Python:
 ```Python
 def pi_leibniz(n: int) -> float:
     s = 1
@@ -400,7 +401,7 @@ def pi_leibniz(n: int) -> float:
 Como se puede ver en el comentario, la primera optimización que se ha hecho es no usar la exponenciación para decidir el signo del sumando. La exponenciación es una operación muy lenta, incluso en C++, mientras que realizar la operación de modulo dos es inherentemente rápida en un ordenador, ya que internamente está utilizando una representación binaria de los números.
 La otra pequeña optimización que se ha realizado es utilizar una variable llamada `k` a la que en cada iteración se le suma 2 para evitar tener que calcular `2 * i + 1`.
 
-La implementación en C++, que está en el fichero `CalculatingPi.cpp`(FIXME ref linea 89 a fichero), es la traducción directa del código en Python:
+La [implementación](https://github.com/eduardoposadas/test_pybind11/blob/64592f1bae25b268000c96c123261bb66d8bfcb0/CalculatingPi.cpp#L85) en C++, que está en el fichero `CalculatingPi.cpp`(FIXME ref linea 89 a fichero), es la traducción directa del código en Python:
 ```C++
 long double pi_leibniz(unsigned long long n)
     long double s = 1;
@@ -436,7 +437,7 @@ Python ofrece la posibilidad de implementar procesos [multihilo](https://docs.py
  - El paso de datos entre diferentes procesos es mucho más costoso que el paso de datos entre hilos ya que se hace usando memoria compartida. En el caso que nos ocupa no es un problema puesto que los procesos hijos únicamente devuelven al padre un número en coma flotante.
 
 Como en este problema el trasiego de datos entre los diferentes procesos es mínimo es posible que la implementación usando el módulo de paralelismo basado en procesos de Python dé buenos resultados.
-La implementación en Python ha sido, como siempre, muy sencilla:
+La [implementación](https://github.com/eduardoposadas/test_pybind11/blob/64592f1bae25b268000c96c123261bb66d8bfcb0/main.py#L220) en Python ha sido, como siempre, muy sencilla:
 ```Python
 def pi_leibniz_concurrent(n: int) -> float:
     n_cpu = os.cpu_count()
@@ -450,8 +451,8 @@ def pi_leibniz_concurrent(n: int) -> float:
 
     return sum_ * 4.0
 ```
-Simplemente se han repartido el número de iteraciones entre el número de procesadores con la fórmula (FIXME ref fich main.py linea 223 `chunk_size = (n + n_cpu - 1) // n_cpu`. De esta manera se lanzan tantos procesos como procesadores haya disponibles y cada proceso se encarga de `chunk_size` operaciones. Si el número de iteraciones no es múltiplo del número de procesadores, el último proceso se encargará de menos iteraciones.
-El código de cada hilo es muy similar al código de la función monoproceso:
+Simplemente se han repartido el número de iteraciones entre el número de procesadores con la [fórmula](https://github.com/eduardoposadas/test_pybind11/blob/64592f1bae25b268000c96c123261bb66d8bfcb0/main.py#L224) `chunk_size = (n + n_cpu - 1) // n_cpu`. De esta manera se lanzan tantos procesos como procesadores haya disponibles y cada proceso se encarga de `chunk_size` operaciones. Si el número de iteraciones no es múltiplo del número de procesadores, el último proceso se encargará de menos iteraciones.
+El [código](https://github.com/eduardoposadas/test_pybind11/blob/64592f1bae25b268000c96c123261bb66d8bfcb0/main.py#L205) de cada hilo es muy similar al código de la función monoproceso:
 ```Python
 def pi_leibniz_concurrent_worker(start: int, end: int) -> float:
     s = 1 if start == 1 else 0
@@ -480,7 +481,7 @@ Además la proporción entre el tiempo de ejecución de la implementación con u
 
 ### Cálculo del valor de $\pi$ usando la fórmula de Leibniz y una implementación multihilo en C++.
 El siguiente paso para intentar reducir el tiempo de ejecución es hacer una implementación multihilo en C++ del algoritmo anterior. Esto es bastante sencillo, ya que no hay datos compartidos entre los distintos hilos como en la criba de Eratóstenes.
-La traducción a C++ del proceso padre:
+La [traducción](https://github.com/eduardoposadas/test_pybind11/blob/64592f1bae25b268000c96c123261bb66d8bfcb0/CalculatingPi.cpp#L124) a C++ del proceso padre:
 ```C++
 long double pi_leibniz_threads(unsigned long long n)
 {
@@ -510,7 +511,7 @@ long double pi_leibniz_threads(unsigned long long n)
     return sum;
 }
 ``` 
-La traducción  a C++ del código del hilo:
+La [traducción](https://github.com/eduardoposadas/test_pybind11/blob/64592f1bae25b268000c96c123261bb66d8bfcb0/CalculatingPi.cpp#L105) a C++ del código del hilo:
 ``` C++
 void pi_leibniz_worker(std::promise<long double> && p,
                        unsigned long long start,
@@ -531,7 +532,7 @@ void pi_leibniz_worker(std::promise<long double> && p,
     p.set_value(s);
 }
 ```
-El hilo padre se encarga de recoger (FIXME ref fich CalculatingPi.cpp linea 151) todos los resultados, sumarlos y multiplicarlos por cuatro para obtener el valor de $\pi$.
+El hilo padre se encarga de [recoger](https://github.com/eduardoposadas/test_pybind11/blob/64592f1bae25b268000c96c123261bb66d8bfcb0/CalculatingPi.cpp#L147) todos los resultados, sumarlos y multiplicarlos por cuatro para obtener el valor de $\pi$.
 
 Los tiempos de ejecución para n=100_000_000:
 ```
@@ -548,7 +549,7 @@ En la tabla de tiempo también se puede apreciar que la reducción de tiempo de 
 
 ### Cálculo del valor de $\pi$ usando la fórmula de Leibniz y una implementación C++ en GPU con CUDA.
 El cálculo del valor de $\pi$ usando la fórmula de Leibniz es un algoritmo que es fácilmente paralelizable y que reduce su tiempo de ejecución con una progresión geométrica en relación con los hilos usados, como se ha visto en el apartado anterior. Es por esto que me pareció interesante implementar este algoritmo usando la GPU.
-La implementación realizada es sumamente sencilla. La función de entrada se encarga de calcular el número de hilos óptimo que se lanzarán en la GPU usando la [función](https://developer.nvidia.com/blog/cuda-pro-tip-occupancy-api-simplifies-launch-configuration/) `cudaOccupancyMaxPotentialBlockSize`, reserva espacio en memoria para el resultado de cada hilo y, cuando los hilos han concluido, recoge los resultados y devuelve el valor de $\pi$ calculado:
+La [implementación](https://github.com/eduardoposadas/test_pybind11/blob/64592f1bae25b268000c96c123261bb66d8bfcb0/CalculatingPi_gpu.cu#L100) realizada es sumamente sencilla. La función de entrada se encarga de calcular el número de hilos óptimo que se lanzarán en la GPU usando la [función](https://developer.nvidia.com/blog/cuda-pro-tip-occupancy-api-simplifies-launch-configuration/) `cudaOccupancyMaxPotentialBlockSize`, reserva espacio en memoria para el resultado de cada hilo y, cuando los hilos han concluido, recoge los resultados y devuelve el valor de $\pi$ calculado:
 ```C++
 long double pi_leibniz_gpu(const unsigned long long iterations) {
     // check for GPU
@@ -582,7 +583,7 @@ long double pi_leibniz_gpu(const unsigned long long iterations) {
     return pi;
 }
 ```
-El código de los hilos que se lanzan en la GPU es muy parecido al de los hilos que se lanzan en la CPU  del apartado anterior:
+El [código](https://github.com/eduardoposadas/test_pybind11/blob/64592f1bae25b268000c96c123261bb66d8bfcb0/CalculatingPi_gpu.cu#L77) de los hilos que se lanzan en la GPU es muy parecido al de los hilos que se lanzan en la CPU  del apartado anterior:
 ```C++
 __global__ void pi_leibniz(float_type *result, const unsigned long int iterations) {
     const unsigned int n_threads = gridDim.x * blockDim.x;
@@ -607,12 +608,12 @@ __global__ void pi_leibniz(float_type *result, const unsigned long int iteration
     result[index] = s;
 }
 ```
-La diferencia fundamental con el código que se ejecuta en CPU es que el inicio y el fin del número de iteraciones que va a calcular cada hilo, las variables `start` y `end`, se tienen que calcular dentro del hilo ya que todos los hilos se lanzan a la vez con la llamada (FIXME ref CalculatingPi_gpu.cu linea 121) `
+La diferencia fundamental con el código que se ejecuta en CPU es que el inicio y el fin del número de iteraciones que va a calcular cada hilo, las variables `start` y `end`, se tienen que calcular dentro del hilo ya que todos los hilos se lanzan a la vez con la [llamada](https://github.com/eduardoposadas/test_pybind11/blob/64592f1bae25b268000c96c123261bb66d8bfcb0/CalculatingPi_gpu.cu#L121)`
 pi_leibniz<<<gridSize, blockSize>>>(dev_result, iterations);`.
 
 De igual manera, como no existe la posibilidad de que cada hilo devuelva un valor, el resultado de cada hilo se guarda en un array llamado `result` en la posición indicada por la variable `index`. Esta variable indica el número de hilo y se calcula en base a unas variables propias de CUDA [llamadas](https://docs.nvidia.com/cuda/cuda-c-programming-guide/#built-in-variables) `blockIdx` y `blockDim`.
 
-Otra diferencia (FIXME ref CalculatingPi_gpu.cu linea 16) con el código que se ejecuta en CPU es el tipo del valor devuelto por cada hilo. Mientras que en el código ejecutado en la CPU el valor es del tipo `long double`, en el código ejecutado en la GPU es del tipo `double` ya que el tipo `long double` no es [soportado](https://docs.nvidia.com/cuda/archive/9.2/cuda-c-programming-guide/#long-double) por CUDA en el código que se ejecuta en GPU.
+Otra [diferencia](https://github.com/eduardoposadas/test_pybind11/blob/64592f1bae25b268000c96c123261bb66d8bfcb0/CalculatingPi_gpu.cu#L17) con el código que se ejecuta en CPU es el tipo del valor devuelto por cada hilo. Mientras que en el código ejecutado en la CPU el valor es del tipo `long double`, en el código ejecutado en la GPU es del tipo `double` ya que el tipo `long double` no es [soportado](https://docs.nvidia.com/cuda/archive/9.2/cuda-c-programming-guide/#long-double) por CUDA en el código que se ejecuta en GPU.
 
 El ordenador en el que estuve haciendo estas pruebas tenía una tarjeta Nvidia GTX 1050, una tarjeta bastante modesta pero que en este caso cumple su función perfectamente. Los tiempos de ejecución para n=100_000_000:
 ```
@@ -653,11 +654,11 @@ A partir de 1.000.000.000 iteraciones el tiempo de ejecución aumenta en la mism
 
 ## Cálculo del valor de $\pi$ usando integración numérica.
 Para el cálculo del valor de $\pi$ usando [integración numérica](https://www.stolaf.edu/people/rab/os/pub0/modules/PiUsingNumericalIntegration/index.html) se ha seguido la misma estrategia que en el apartado anterior para el cálculo del valor de $\pi$ usando la [fórmula de Leibniz](https://en.wikipedia.org/wiki/Leibniz_formula_for_%CF%80). Se han hecho las siguientes implementaciones:
- - En Python sin concurrencia (FIXME ref a funciones en el código).
- - En Python con concurrencia multiproceso.
- - En C++ con un único hilo.
- - En C++ con múltiples hilos.
- - En C++ con CUDA, es decir ejecutando el algoritmo con múltiples hilos en GPU.
+ - En Python sin [concurrencia](https://github.com/eduardoposadas/test_pybind11/blob/64592f1bae25b268000c96c123261bb66d8bfcb0/main.py#L147).
+ - En Python con [concurrencia](https://github.com/eduardoposadas/test_pybind11/blob/64592f1bae25b268000c96c123261bb66d8bfcb0/main.py#L171) multiproceso.
+ - En C++ con un único [hilo](https://github.com/eduardoposadas/test_pybind11/blob/64592f1bae25b268000c96c123261bb66d8bfcb0/CalculatingPi.cpp#L10).
+ - En C++ con múltiples [hilos](https://github.com/eduardoposadas/test_pybind11/blob/64592f1bae25b268000c96c123261bb66d8bfcb0/CalculatingPi.cpp#L50).
+ - En C++ con CUDA, es decir ejecutando el algoritmo con múltiples [hilos](https://github.com/eduardoposadas/test_pybind11/blob/64592f1bae25b268000c96c123261bb66d8bfcb0/CalculatingPi_gpu.cu#L40) en GPU.
 
 La implementación en Python es:
 ```Python
@@ -726,7 +727,10 @@ Para compilar el código fuente en Ubuntu 24.04 y Ubuntu 20.04 los pasos son:
    ```bash
    $ sudo apt install nvidia-cuda-toolkit
    ```
- - Copia el repositorio git.
+ - Clona el repositorio git.
+   ```bash
+   git clone https://github.com/eduardoposadas/test_pybind11.git
+   ```
  - Cambia al directorio creado y ejecuta `cmake` para configurar el proyecto y generar un sistema de compilación.
    ```bash
    $ cd test_pybind11
